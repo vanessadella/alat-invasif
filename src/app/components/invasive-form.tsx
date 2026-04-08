@@ -335,9 +335,7 @@ export function InvasiveForm({ onSave, onSaveDraft, onCancel, existingDevices, e
           <button
             type="button"
             onClick={() => setShowDivaModal(true)}
-            className={`flex items-center justify-between px-3 py-2 bg-input-background border rounded-md text-left hover:border-ring transition-colors ${
-              !divaScore && isIvPerifer ? "border-destructive/50" : "border-border"
-            }`}
+            className={`flex items-center justify-between px-3 py-2 bg-input-background border rounded-md text-left hover:border-ring transition-colors border-border`}
           >
             <span
               className={divaScore ? "text-foreground" : "text-muted-foreground"}
@@ -418,9 +416,7 @@ export function InvasiveForm({ onSave, onSaveDraft, onCancel, existingDevices, e
           <button
             type="button"
             onClick={() => setShowPivasModal(true)}
-            className={`flex items-center justify-between px-3 py-2 bg-input-background border rounded-md text-left hover:border-ring transition-colors ${
-              !pivasScore && isIvPerifer ? "border-destructive/50" : "border-border"
-            }`}
+            className={`flex items-center justify-between px-3 py-2 bg-input-background border rounded-md text-left hover:border-ring transition-colors border-border`}
           >
             <span
               className={pivasScore ? "text-foreground" : "text-muted-foreground"}

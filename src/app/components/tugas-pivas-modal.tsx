@@ -225,46 +225,46 @@ function DeviceRow({
   return (
     <div className={`bg-card border rounded-xl overflow-hidden transition-all duration-200 ${hasScore ? "border-border" : "border-[#e21100]/30"}`}>
       <div className="p-4 flex flex-col gap-3">
-        {/* Row 1: device info + status badges */}
+        {/* Row 1: device info + status badges / device header */}
         <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex flex-col gap-1 w-full">
+            <div className="flex items-center justify-between w-full">
               <p className="text-foreground font-bold text-sm md:text-base">{device.displayName}</p>
-              <span className="bg-[#15803d] text-white px-2 py-0.5 rounded-full text-[10px] font-bold leading-none">
-                Berhasil
-              </span>
-              {(device.intervensiTasks && device.intervensiTasks.length > 0) && (
-                <span className="border border-[#c2410c] text-[#c2410c] px-2 py-0.5 rounded-full text-[10px] font-bold leading-none">
-                  Intervensi
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="bg-[#047857] text-white px-2 py-0.5 rounded-full text-[10px] font-bold leading-none">
+                  Berhasil
                 </span>
-              )}
+                {(device.intervensiTasks && device.intervensiTasks.length > 0) && (
+                  <span className="border border-[#c2410c] text-[#c2410c] px-2 py-0.5 rounded-full text-[10px] font-bold leading-none bg-white">
+                    {device.intervensiTasks.every(t => t.checked) ? "Intervensi Selesai" : "Intervensi"}
+                  </span>
+                )}
+              </div>
             </div>
-            <p className="text-muted-foreground text-xs md:text-sm mt-0.5">
+            <p className="text-muted-foreground text-xs md:text-sm">
               {[device.location, device.size].filter(Boolean).join(", ") || "—"}
             </p>
           </div>
-
-          {/* Desktop-only action button on the right */}
-          <button
-            onClick={onEditPivas}
-            className={`hidden md:flex py-1.5 px-3 rounded-lg font-bold text-xs transition-all whitespace-nowrap shrink-0 items-center gap-1.5 ${
-              hasScore
-                ? "bg-card border-2 border-[#00109c] text-[#00109c] hover:bg-[#f0f4ff]"
-                : "bg-[#00109c] text-white hover:opacity-90 shadow-sm"
-            }`}
-          >
-            {hasScore ? "UBAH PIVAS" : "ISI PIVAS"}
-          </button>
         </div>
 
-        {/* Row 2: Before → After score */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-[10px] text-muted-foreground font-bold tracking-wider uppercase shrink-0">Skor PIVAS</span>
-          <BeforeAfterScore prevScore={prevScore} newScore={newScore} />
+        {/* Row 2: Before & After score as plain text rows */}
+        <div className="flex flex-col gap-1.5 mt-1">
+          <div className="flex items-start gap-4">
+            <span className="text-sm text-muted-foreground min-w-[140px]">Skor PIVAS Sebelum</span>
+            <span className={`text-sm font-bold flex-1 ${!prevScore ? "text-[#e21100]" : "text-foreground"}`}>
+              {prevScore || "Belum ada skor"}
+            </span>
+          </div>
+          <div className="flex items-start gap-4">
+            <span className="text-sm text-muted-foreground min-w-[140px]">Skor PIVAS Saat Ini</span>
+            <span className={`text-sm font-bold flex-1 ${!newScore ? "text-[#e21100]" : "text-foreground"}`}>
+              {newScore || "Wajib diisi"}
+            </span>
+          </div>
         </div>
 
-        {/* Row 3: Photo + mobile action button */}
-        <div className="flex items-center justify-between gap-3">
+        {/* Row 3: Photo controls */}
+        <div className="mt-1">
           <PhotoControl
             deviceId={device.id}
             displayName={device.displayName}
@@ -277,19 +277,19 @@ function DeviceRow({
             onRemove={onRemovePhoto}
             onPreview={onPreviewPhoto}
           />
-
-          {/* Mobile-only action button */}
-          <button
-            onClick={onEditPivas}
-            className={`md:hidden py-2 px-4 rounded-lg font-bold text-xs transition-all whitespace-nowrap shrink-0 flex items-center gap-1.5 ${
-              hasScore
-                ? "bg-card border-2 border-[#00109c] text-[#00109c] hover:bg-[#f0f4ff]"
-                : "bg-[#00109c] text-white hover:opacity-90 shadow-sm"
-            }`}
-          >
-            {hasScore ? "UBAH PIVAS" : "ISI PIVAS"}
-          </button>
         </div>
+
+        {/* Full width action button */}
+        <button
+          onClick={onEditPivas}
+          className={`w-full py-2.5 px-4 rounded-lg font-bold text-sm transition-all text-center border mt-2 ${
+            hasScore
+              ? "bg-white border-[#00277f] text-[#00277f] hover:bg-secondary/30"
+              : "bg-white border-[#00277f] text-[#00277f] hover:bg-secondary/30 shadow-sm"
+          }`}
+        >
+          UPDATE SKOR PIVAS
+        </button>
       </div>
     </div>
   );
@@ -468,25 +468,20 @@ export function TugasPivasModal({ devices, onSave, onClose }: TugasPivasModalPro
             </div>
           </div>
 
-          {/* Progress bar */}
-          <div className="flex items-center gap-3 mb-4 px-1">
-            <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-500 ease-out"
-                style={{
-                  width: `${(evaluatedCount / devices.length) * 100}%`,
-                  backgroundColor: allEvaluated ? "#15803d" : "#00277f",
-                }}
-              />
-            </div>
-            <span className="text-xs font-bold text-muted-foreground shrink-0">
-              {evaluatedCount}/{devices.length} Skor PIVAS
-            </span>
-            {allEvaluated && <CheckCircle2 className="w-4 h-4 text-[#15803d] shrink-0" />}
+          <hr className="border-t border-border mt-3 mb-1" />
+
+          {/* Catatan Tambahan Moved to Top */}
+          <div className="flex flex-col gap-1.5 mb-2 mt-2">
+            <label className="text-sm font-bold text-foreground">Catatan Tambahan <span className="text-muted-foreground font-normal">(opsional)</span></label>
+            <textarea
+              className="w-full min-h-[72px] p-3 border border-border rounded-lg bg-card text-foreground text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#00277f]/20 focus:border-[#00277f]/50 transition-all"
+              placeholder="Cth: Pasien Tidak Mau Minum Obat Mules"
+              value={catatan}
+              onChange={(e) => setCatatan(e.target.value)}
+            />
           </div>
 
-          {/* ── UNIFIED Device List ── */}
-          <div className="flex flex-col gap-3 mb-2">
+          <div className="flex flex-col gap-4 mt-2 mb-2 pb-8">
             {devices.map(device => (
               <DeviceRow
                 key={device.id}
@@ -505,34 +500,20 @@ export function TugasPivasModal({ devices, onSave, onClose }: TugasPivasModalPro
               />
             ))}
           </div>
-
-          {/* Catatan */}
-          <div className="flex flex-col gap-1.5 mb-2 mt-4">
-            <label className="text-sm font-bold text-foreground">Catatan Tambahan <span className="text-muted-foreground font-normal">(opsional)</span></label>
-            <textarea
-              className="w-full min-h-[72px] p-3 border border-border rounded-lg bg-card text-foreground text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#00277f]/20 focus:border-[#00277f]/50 transition-all"
-              placeholder="Cth: Pasien Tidak Mau Minum Obat Mules"
-              value={catatan}
-              onChange={(e) => setCatatan(e.target.value)}
-            />
-          </div>
         </div>
 
         {/* Submit */}
         <button
           onClick={handleSimpanTugas}
           disabled={!allEvaluated}
-          className={`mt-2 py-4 w-full shrink-0 rounded-xl font-bold text-base transition-all duration-200 flex items-center justify-center gap-2 ${
+          className={`mt-2 py-3 w-full shrink-0 rounded-lg font-bold text-base transition-all duration-200 flex items-center justify-center gap-2 ${
             allEvaluated
-              ? "bg-[#15803d] text-white hover:opacity-90 shadow-md active:scale-[0.98]"
+              ? "bg-[#00277f] text-white hover:opacity-90 active:scale-[0.98]"
               : "bg-muted text-muted-foreground cursor-not-allowed"
           }`}
         >
           {allEvaluated ? (
-            <>
-              <CheckCircle2 className="w-5 h-5" />
-              SIMPAN
-            </>
+            "SIMPAN"
           ) : (
             `ISI SKOR PIVAS (${evaluatedCount}/${devices.length})`
           )}

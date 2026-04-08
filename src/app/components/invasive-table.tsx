@@ -484,6 +484,34 @@ function InlineEditableRow({
           </div>
         )}
       </td>
+      {/* Skor DIVA */}
+      <td className={cellBase}>
+        {deviceType === "IV Perifer" ? (
+          <div
+            className="flex items-center h-10 pl-4 pr-4 cursor-pointer hover:bg-secondary/30 transition-colors"
+            onClick={() => setShowDivaModal(true)}
+          >
+            <span
+              className={divaScore ? "text-foreground" : "text-muted-foreground"}
+              style={{ fontSize: "var(--text-sm)", fontFamily: "'Inter', sans-serif" }}
+            >
+              {divaScore ? formatDivaDisplay(divaScore, divaType) : "Skor DIVA"}
+            </span>
+          </div>
+        ) : (
+          <div className="h-10 flex items-center pl-4">
+            <span className="text-muted-foreground" style={tdStyle}>&nbsp;</span>
+          </div>
+        )}
+        {showDivaModal && (
+          <DivaModal
+            currentScore={divaScore}
+            currentType={divaType}
+            onSave={(score, type) => { setDivaScore(score); setDivaType(type); setShowDivaModal(false); }}
+            onClose={() => setShowDivaModal(false)}
+          />
+        )}
+      </td>
       {/* Waktu Pemasangan */}
       <td className={cellBase}>
         <DateTimePicker
@@ -837,13 +865,20 @@ export function InvasiveTable({
                 <th className="text-left px-4 py-2 border border-border text-foreground whitespace-nowrap w-[80px]" style={thStyle}>Size</th>
                 <th className="text-left px-4 py-2 border border-border text-foreground w-[112px]" style={thStyle}>Size Huber Needle</th>
                 <th className="text-left px-4 py-2 border border-border text-foreground whitespace-nowrap" style={thStyle}>
+                  Skor DIVA<span className="text-destructive">*</span>
+                </th>
+                <th className="text-left px-4 py-2 border border-border text-foreground whitespace-nowrap" style={thStyle}>
                   Waktu Pemasangan<span className="text-destructive">*</span>
                 </th>
                 <th className="text-left px-4 py-2 border border-border text-foreground" style={thStyle}>Rekomendasi Pelepasan Alat</th>
                 <th className="text-left px-4 py-2 border border-border text-foreground whitespace-nowrap" style={thStyle}>Alasan Pelepasan</th>
                 <th className="text-left px-4 py-2 border border-border text-foreground whitespace-nowrap" style={thStyle}>Waktu Pelepasan</th>
-                <th className="text-left px-4 py-2 border border-border text-foreground whitespace-nowrap" style={thStyle}>Skor PIVAS</th>
-                <th className="text-left px-4 py-2 border border-border text-foreground whitespace-nowrap w-[152px]" style={thStyle}>Status</th>
+                <th className="text-left px-4 py-2 border border-border text-foreground whitespace-nowrap" style={thStyle}>
+                  Skor PIVAS<span className="text-destructive">*</span>
+                </th>
+                <th className="text-left px-4 py-2 border border-border text-foreground whitespace-nowrap w-[152px]" style={thStyle}>
+                  Status<span className="text-destructive">*</span>
+                </th>
                 <th className="text-left px-4 py-2 border border-border text-foreground whitespace-nowrap" style={thStyle}>Komen</th>
                 <th className="text-left px-4 py-2 border border-border text-foreground whitespace-nowrap" style={thStyle}>Pemasang</th>
                 <th className="text-left px-4 py-2 border border-border text-foreground whitespace-nowrap" style={thStyle}>Pelepas</th>
@@ -949,6 +984,12 @@ export function InvasiveTable({
                     <td className="px-4 py-2 border border-border text-foreground whitespace-nowrap" style={tdStyle}>{device.size || ""}</td>
                     <td className="px-4 py-2 border border-border text-foreground whitespace-nowrap" style={tdStyle}>
                       {device.sizeHuber || ""}
+                    </td>
+                    <td className="px-4 py-2 border border-border text-foreground whitespace-nowrap" style={tdStyle}>
+                      {device.deviceType === "IV Perifer" && device.divaScore ? (
+                        device.divaType === "anak" ? `Anak: ${parseInt(device.divaScore, 10) <= 3 ? "Risiko Rendah" : "Risiko Tinggi"}` :
+                        `Dewasa: ${device.divaScore}-${parseInt(device.divaScore, 10) === 0 ? "Risiko Rendah" : parseInt(device.divaScore, 10) <= 3 ? "Risiko Sedang" : "Risiko Tinggi"}`
+                      ) : ""}
                     </td>
                     <td className="px-4 py-2 border border-border text-foreground whitespace-nowrap" style={tdStyle}>
                       {device.waktuPemasangan ? formatDateDisplay(device.waktuPemasangan) : ""}
