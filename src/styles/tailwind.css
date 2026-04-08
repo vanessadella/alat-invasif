@@ -1,0 +1,15 @@
+@import 'tailwindcss' source(none);
+@source '../**/*.{js,ts,jsx,tsx}';
+
+@import 'tw-animate-css';
+
+/* Reminder highlight animation for scrolling to pending intervention devices */
+@keyframes reminder-highlight {
+  0% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.6); background-color: rgba(251, 191, 36, 0.18); }
+  30% { box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.35); background-color: rgba(251, 191, 36, 0.13); }
+  70% { box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.15); background-color: rgba(251, 191, 36, 0.06); }
+  100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); background-color: transparent; }
+}
+.reminder-flash {
+  animation: reminder-highlight 1.6s ease-out forwards;
+}
