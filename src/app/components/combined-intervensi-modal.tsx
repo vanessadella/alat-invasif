@@ -9,7 +9,7 @@ import {
   PIVAS_INTERVENTION_CONFIG,
   hasPendingIntervensi,
 } from "./invasive-data";
-import { X, Clock, CheckCircle2, AlertCircle, ChevronDown, Lock, FileText } from "lucide-react";
+import { X, Clock, CheckCircle2, AlertCircle, ChevronDown, Lock, FileText, ClipboardCheck, ChevronRight } from "lucide-react";
 
 // ── Shared styles ───────────────────────────────────────────────
 
@@ -223,11 +223,14 @@ function CompletedEntry({ entry, deviceName }: { entry: PivasLogEntry; deviceNam
 
 function EmptyIntervensi() {
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-6">
-      <div className="w-24 h-24 mb-4 bg-[#ecfdf5] rounded-full flex items-center justify-center">
-        <CheckCircle2 className="w-12 h-12 text-[#047857]" />
+    <div className="flex flex-col items-center justify-center py-20 px-6">
+      <div className="relative w-28 h-28 mb-6 bg-[#f8fafc] rounded-full border-[6px] border-white shadow-sm flex items-center justify-center overflow-hidden">
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="w-16 h-16 bg-[#ecfdf5] rounded-full absolute translate-x-2 -translate-y-2 opacity-60"></div>
+          <ClipboardCheck className="w-12 h-12 text-[#94a3b8] relative z-10" strokeWidth={1.5} />
+        </div>
       </div>
-      <p className="text-sm text-muted-foreground text-center">
+      <p className="text-sm font-medium text-[#94a3b8] text-center" style={{ fontFamily: "'Inter', sans-serif" }}>
         Belum ada intervensi
       </p>
     </div>
@@ -418,47 +421,64 @@ interface InterventionToastProps {
 }
 
 export function InterventionToast({ pendingCount, allDone, onOpen }: InterventionToastProps) {
-  if (pendingCount === 0 && !allDone) return null;
-
   return (
     <div className="w-full mb-3">
+      {/* Empty State Banner (No interventions at all) */}
+      {pendingCount === 0 && !allDone && (
+        <button
+          onClick={onOpen}
+          className="w-full flex items-center justify-between px-4 py-3 bg-card border border-border rounded-xl shadow-sm hover:shadow-md transition-all group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 border border-border rounded-lg bg-[#f1f5f9] shrink-0">
+              <ClipboardCheck className="w-5 h-5 text-foreground opacity-80" strokeWidth={1.5} />
+            </div>
+            <div className="flex flex-col items-start">
+              <span className="text-sm font-bold text-foreground leading-snug" style={{ fontFamily: "'Inter', sans-serif" }}>Tugas Intervensi</span>
+              <span className="text-xs text-muted-foreground/80 leading-snug" style={{ fontFamily: "'Inter', sans-serif" }}>Belum ada tugas intervensi</span>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+        </button>
+      )}
+
       {/* Warning toast for pending interventions */}
       {pendingCount > 0 && (
         <button
           onClick={onOpen}
           className="w-full flex items-center gap-3 px-4 py-3 bg-[#FFFBEB] border border-[#FFD98F] rounded-xl shadow-sm hover:shadow-md transition-all group"
         >
-            <AlertCircle className="w-5 h-5 text-[#b45309] shrink-0" />
-            <span className="text-[#92400e] flex-1 text-left text-sm" style={{ fontFamily: "'Inter', sans-serif" }}>
-              <span className="font-bold">{pendingCount} tugas intervensi alat invasif</span> memiliki belum selesai
-            </span>
-            <span
-              className="px-3 py-1.5 bg-white border border-border rounded-lg text-sm font-bold text-foreground group-hover:bg-secondary transition-colors shrink-0"
-              style={{ fontFamily: "'Inter', sans-serif" }}
-            >
-              Lihat
-            </span>
-          </button>
-        )}
-
-        {/* Green toast when all interventions complete */}
-        {pendingCount === 0 && allDone && (
-          <button
-            onClick={onOpen}
-            className="w-full flex items-center gap-3 px-4 py-3 bg-white border border-border rounded-xl shadow-sm hover:shadow-md transition-all group"
+          <AlertCircle className="w-5 h-5 text-[#b45309] shrink-0" />
+          <span className="text-[#92400e] flex-1 text-left text-sm" style={{ fontFamily: "'Inter', sans-serif" }}>
+            <span className="font-bold">{pendingCount} tugas intervensi alat invasif</span> memiliki belum selesai
+          </span>
+          <span
+            className="px-3 py-1.5 bg-white border border-border rounded-lg text-sm font-bold text-foreground group-hover:bg-secondary transition-colors shrink-0"
+            style={{ fontFamily: "'Inter', sans-serif" }}
           >
-            <CheckCircle2 className="w-5 h-5 text-[#047857] shrink-0" />
-            <span className="text-foreground flex-1 text-left text-sm font-bold" style={{ fontFamily: "'Inter', sans-serif" }}>
-              Tugas Intervensi
-            </span>
-            <span
-              className="px-3 py-1.5 bg-white border border-border rounded-lg text-sm font-bold text-foreground group-hover:bg-secondary transition-colors shrink-0"
-              style={{ fontFamily: "'Inter', sans-serif" }}
-            >
-              Lihat
-            </span>
-          </button>
-        )}
+            Lihat
+          </span>
+        </button>
+      )}
+
+      {/* Green toast when all interventions complete */}
+      {pendingCount === 0 && allDone && (
+        <button
+          onClick={onOpen}
+          className="w-full flex items-center gap-3 px-4 py-3 bg-white border border-border rounded-xl shadow-sm hover:shadow-md transition-all group"
+        >
+          <CheckCircle2 className="w-5 h-5 text-[#047857] shrink-0" />
+          <span className="text-foreground flex-1 text-left text-sm font-bold" style={{ fontFamily: "'Inter', sans-serif" }}>
+            Tugas Intervensi
+          </span>
+          <span
+            className="px-3 py-1.5 bg-white border border-border rounded-lg text-sm font-bold text-foreground group-hover:bg-secondary transition-colors shrink-0"
+            style={{ fontFamily: "'Inter', sans-serif" }}
+          >
+            Lihat
+          </span>
+        </button>
+      )}
     </div>
   );
 }
