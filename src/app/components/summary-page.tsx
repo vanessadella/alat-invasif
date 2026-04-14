@@ -7,6 +7,7 @@ import { EmptyStateNodata } from "./empty-state-nodata";
 import { calculateDayCount, hasPendingIntervensi, InvasiveDevice } from "./invasive-data";
 import { TugasTabContent } from "./tugas-tab-content";
 import { TugasPivasModal } from "./tugas-pivas-modal";
+import { InterventionToast } from "./combined-intervensi-modal";
 import { useState } from "react";
 
 const fontInter: React.CSSProperties = { fontFamily: "'Inter', sans-serif" };
@@ -291,6 +292,7 @@ function InvasifTabContent() {
   const berhasil = devices.filter((d) => d.status === "berhasil").length;
   const tidakBerhasil = devices.filter((d) => d.status === "tidak_berhasil").length;
   const pendingIntervensiDevices = filteredDevices.filter((d) => hasPendingIntervensi(d));
+  const hasAnyIntervensiTasks = devices.some(d => d.intervensiTasks && d.intervensiTasks.length > 0);
 
   return (
     <>
@@ -336,23 +338,13 @@ function InvasifTabContent() {
           </button>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 bg-secondary/40 p-4 flex flex-col gap-3 overflow-y-auto">
-          {/* Intervention alert banner */}
-          {pendingIntervensiDevices.length > 0 && !showForm && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-[#FFFBEB] border border-[#FFD98F] rounded-lg">
-              <AlertCircle className="w-4 h-4 text-[#b45309] shrink-0" />
-              <span className="text-[#92400e] flex-1" style={{ fontSize: "var(--text-xs)", fontWeight: "var(--font-weight-normal)", ...fontInter }}>
-                <span style={{ fontWeight: "var(--font-weight-bold)" }}>{pendingIntervensiDevices.length} alat</span> memiliki intervensi belum selesai
-              </span>
-              <button
-                onClick={handleReminderClick}
-                className="px-2 py-1 bg-[#b45309] text-white rounded shrink-0"
-                style={{ fontSize: "var(--text-xs)", fontWeight: "var(--font-weight-bold)", ...fontInter }}
-              >
-                Lihat
-              </button>
-            </div>
+        <div className="flex-1 bg-secondary/40 p-4 flex flex-col gap-3 overflow-y-auto pb-20">
+          {!showForm && (
+            <InterventionToast
+              pendingCount={pendingCount}
+              allDone={pendingCount === 0 && hasAnyIntervensiTasks}
+              onOpen={() => handleOpenIntervensiModal()}
+            />
           )}
 
           {/* Add button */}
@@ -432,28 +424,13 @@ function InvasifTabContent() {
         </div>
       </div>
 
-      {/* ===== DESKTOP INVASIF CONTENT ===== */}
       <div className="hidden min-[761px]:flex flex-col flex-1 overflow-hidden">
-        <div className="flex-1 px-6 py-4 overflow-auto">
-          {/* Intervention alert banner for desktop */}
-          {pendingIntervensiDevices.length > 0 && (
-            <div className="flex items-center gap-3 px-4 py-2.5 mb-3 bg-[#FFFBEB] border border-[#FFD98F] rounded-lg">
-              <AlertCircle className="w-5 h-5 text-[#b45309] shrink-0" />
-              <span className="text-[#92400e] flex-1" style={{ fontSize: "var(--text-sm)", fontWeight: "var(--font-weight-normal)", ...fontInter }}>
-                <span style={{ fontWeight: "var(--font-weight-bold)" }}>{pendingIntervensiDevices.length} alat invasif</span> memiliki intervensi yang belum selesai
-              </span>
-              <button
-                onClick={handleReminderClick}
-                className="px-3 py-1.5 bg-[#b45309] text-white rounded-lg shrink-0 flex items-center gap-1"
-                style={{ fontSize: "var(--text-sm)", fontWeight: "var(--font-weight-bold)", ...fontInter }}
-              >
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <path d="M4.817 11.333C5.187 11.327 5.539 11.174 5.797 10.909C6.054 10.643 6.197 10.287 6.192 9.917H3.441C3.437 10.287 3.579 10.643 3.837 10.909C4.095 11.174 4.447 11.327 4.817 11.333ZM9.448 8.019C9.033 7.56 8.255 6.869 8.255 4.604C8.264 3.802 7.995 3.021 7.494 2.395C6.992 1.769 6.289 1.336 5.504 1.169V0.708C5.507 0.523 5.436 0.344 5.307 0.212C5.178 0.079 5.002 0.003 4.817 0C4.725 0.001 4.634 0.021 4.55 0.057C4.466 0.093 4.39 0.146 4.326 0.212C4.262 0.278 4.212 0.355 4.178 0.441C4.144 0.526 4.127 0.617 4.129 0.709V1.17C3.344 1.336 2.641 1.769 2.139 2.396C1.637 3.022 1.368 3.802 1.377 4.605C1.378 6.867 0.6 7.56 0.185 8.019C0.065 8.15 -0.001 8.322 0 8.5C-0.002 8.685 0.069 8.864 0.199 8.997C0.328 9.13 0.505 9.206 0.69 9.208H8.943C9.129 9.206 9.306 9.13 9.435 8.997C9.564 8.864 9.636 8.685 9.633 8.5C9.635 8.322 9.568 8.15 9.448 8.019Z" fill="white" transform="translate(3, 2.5)" />
-                </svg>
-                Telusuri
-              </button>
-            </div>
-          )}
+        <div className="flex-1 px-6 py-4 overflow-auto pb-20">
+          <InterventionToast
+            pendingCount={pendingCount}
+            allDone={pendingCount === 0 && hasAnyIntervensiTasks}
+            onOpen={() => handleOpenIntervensiModal()}
+          />
 
           <InvasiveTable
             devices={filteredDevices}

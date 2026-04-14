@@ -127,7 +127,7 @@ export function StatusModal({ deviceType, currentStatus, currentKriteria, onSave
           {status && (
             <div className="flex flex-col gap-2">
               <label className="text-sm font-bold text-foreground">
-                Kriteria <span className="text-destructive">*</span>
+                {status === "tidak_berhasil" ? "Alasan" : "Kriteria"} <span className="text-destructive">*</span>
               </label>
               <div className="flex flex-col gap-1">
                 {criteriaList.map((text) => {

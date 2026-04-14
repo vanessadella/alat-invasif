@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { ChevronLeft, ChevronRight, Filter, Plus, Pencil, X, Check, Clock, AlertCircle, CheckCircle2, BookmarkPlus, Save, FileText, FileCheck2, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Filter, Plus, Pencil, X, Check, Clock, AlertCircle, CheckCircle2, BookmarkPlus, Save, FileText, FileCheck2, Trash2, ArrowUpDown, ArrowUp, ArrowDown, Link } from "lucide-react";
 import {
   InvasiveDevice,
   InvasiveDeviceConfig,
@@ -7,12 +7,15 @@ import {
   DEVICE_NAMES,
   ALASAN_PELEPASAN,
   PEMASANG_OPTIONS,
+  INSTRUKSI_KHUSUS_URINE,
+  INSTRUKSI_KHUSUS_ETT,
   PivasLogEntry,
   FormDraft,
   formatDateDisplay,
   calculateDayCount,
   hasPendingIntervensi,
 } from "./invasive-data";
+import { useAppContext } from "./root-layout";
 import { FilterState, getActiveFilterCount } from "./filter-modal";
 import { InlineCellDropdown } from "./inline-cell-dropdown";
 import { DateTimePicker } from "./date-time-picker";
@@ -206,6 +209,10 @@ function InlineEditableRow({
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [showEkstravasasiModal, setShowEkstravasasiModal] = useState(false);
   const [kategoriPhlebitis, setKategoriPhlebitis] = useState(draft?.kategoriPhlebitis ?? initialDevice?.kategoriPhlebitis ?? "");
+  const [instruksiKhusus, setInstruksiKhusus] = useState<string[]>(draft?.instruksiKhusus ?? initialDevice?.instruksiKhusus ?? []);
+  const [isiBalon, setIsiBalon] = useState(draft?.isiBalon ?? initialDevice?.isiBalon ?? "");
+  const [ekstravasasiChecks, setEkstravasasiChecks] = useState<string[]>(draft?.ekstravasasiChecks ?? initialDevice?.ekstravasasiChecks ?? []);
+  const [validationErrors, setValidationErrors] = useState<Record<string, boolean>>({});
 
   // Track whether we should skip the deviceType reset effect on first render with draft
   const isInitialMount = useRef(hasDraft);
@@ -214,6 +221,8 @@ function InlineEditableRow({
 
   const isIvPerifer = deviceType === "IV Perifer";
   const needsEkstravasasi = (deviceType === "Chemoport" || deviceType === "PICC") && alasanPelepasan === "Ekstravasasi";
+  const needsInstruksiKhusus = deviceType === "Urine Catheter";
+  const needsIsiBalon = deviceType === "ETT" || deviceType === "Urine Catheter";
 
   // Sync form state to draft ref on every change
   useEffect(() => {
@@ -222,13 +231,14 @@ function InlineEditableRow({
         deviceType, jenis, location, posisi, size, sizeHuber,
         divaScore, divaType,
         waktuPemasangan, waktuPelepasan, alasanPelepasan,
-        ekstravasasiScore,
+        ekstravasasiScore, ekstravasasiChecks,
         pivasScore, kategoriPhlebitis,
         status, statusKriteria,
         pemasang, pelepas, komen,
+        instruksiKhusus, isiBalon,
       };
     }
-  }, [deviceType, jenis, location, posisi, size, sizeHuber, divaScore, divaType, waktuPemasangan, waktuPelepasan, alasanPelepasan, ekstravasasiScore, pivasScore, kategoriPhlebitis, status, statusKriteria, pemasang, pelepas, komen, formDraftRef]);
+  }, [deviceType, jenis, location, posisi, size, sizeHuber, divaScore, divaType, waktuPemasangan, waktuPelepasan, alasanPelepasan, ekstravasasiScore, ekstravasasiChecks, pivasScore, kategoriPhlebitis, status, statusKriteria, pemasang, pelepas, komen, instruksiKhusus, isiBalon, formDraftRef]);
 
   // Reset dependent fields when device type changes (skip on initial mount with draft)
   useEffect(() => {
@@ -266,7 +276,21 @@ function InlineEditableRow({
     : locationOptions;
 
   const handleSave = () => {
-    if (!deviceType || !waktuPemasangan) return;
+    // Validate mandatory fields
+    const errors: Record<string, boolean> = {};
+    if (!deviceType) errors.deviceType = true;
+    if (!waktuPemasangan) errors.waktuPemasangan = true;
+    if (isIvPerifer && !pivasScore) errors.pivasScore = true;
+    if (isIvPerifer && !divaScore) errors.divaScore = true;
+    if (!status) errors.status = true;
+    if (needsWaktuPelepasan && !waktuPelepasan) errors.waktuPelepasan = true;
+
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    setValidationErrors({});
+
     const fullLocation = deviceType === "IV Perifer" && posisi ? `${posisi}, ${location}` : location;
 
     // Build PIVAS log - append new entry if score changed
@@ -300,6 +324,7 @@ function InlineEditableRow({
       waktuPelepasan,
       alasanPelepasan,
       ekstravasasiScore: needsEkstravasasi ? ekstravasasiScore : undefined,
+      ekstravasasiChecks: needsEkstravasasi ? ekstravasasiChecks : undefined,
       pivasScore,
       pivasLog,
       kategoriPhlebitis,
@@ -309,6 +334,8 @@ function InlineEditableRow({
       pelepas,
       komen,
       intervensiTasks: initialDevice?.intervensiTasks,
+      instruksiKhusus: needsInstruksiKhusus ? instruksiKhusus : undefined,
+      isiBalon: needsIsiBalon ? isiBalon : undefined,
     };
     onSave(device);
   };
@@ -329,6 +356,7 @@ function InlineEditableRow({
       waktuPelepasan,
       alasanPelepasan,
       ekstravasasiScore: needsEkstravasasi ? ekstravasasiScore : undefined,
+      ekstravasasiChecks: needsEkstravasasi ? ekstravasasiChecks : undefined,
       pivasScore,
       pivasLog: initialDevice?.pivasLog || [],
       kategoriPhlebitis,
@@ -339,6 +367,8 @@ function InlineEditableRow({
       komen,
       intervensiTasks: initialDevice?.intervensiTasks,
       isDraft: true,
+      instruksiKhusus: needsInstruksiKhusus ? instruksiKhusus : undefined,
+      isiBalon: needsIsiBalon ? isiBalon : undefined,
     };
     if (onSaveDraft) onSaveDraft(device);
   };
@@ -397,9 +427,10 @@ function InlineEditableRow({
   };
 
   return (
+    <>
     <tr className="bg-card">
       {/* Alat Invasif */}
-      <td className={stickyFirstTdEdit} style={scrolledLeft ? leftShadow : noShadow}>
+      <td className={`${stickyFirstTdEdit} ${validationErrors.deviceType ? 'ring-2 ring-inset ring-destructive/50' : ''}`} style={scrolledLeft ? leftShadow : noShadow}>
         {isEditing ? (
           <div className="h-10 flex items-center pl-4">
             <span className="text-foreground" style={tdStyle}>{initialDevice!.displayName}</span>
@@ -513,7 +544,7 @@ function InlineEditableRow({
         )}
       </td>
       {/* Waktu Pemasangan */}
-      <td className={cellBase}>
+      <td className={`${cellBase} ${validationErrors.waktuPemasangan ? 'ring-2 ring-inset ring-destructive/50' : ''}`}>
         <DateTimePicker
           value={waktuPemasangan}
           onChange={setWaktuPemasangan}
@@ -559,7 +590,8 @@ function InlineEditableRow({
         {showEkstravasasiModal && (
           <EkstravasasiModal
             currentScore={ekstravasasiScore}
-            onSave={(score) => { setEkstravasasiScore(score); setShowEkstravasasiModal(false); }}
+            currentChecks={ekstravasasiChecks}
+            onSave={(score, chks) => { setEkstravasasiScore(score); setEkstravasasiChecks(chks); setShowEkstravasasiModal(false); }}
             onClose={() => setShowEkstravasasiModal(false)}
           />
         )}
@@ -573,7 +605,7 @@ function InlineEditableRow({
         />
       </td>
       {/* Skor PIVAS */}
-      <td className={cellBase}>
+      <td className={`${cellBase} ${validationErrors.pivasScore ? 'ring-2 ring-inset ring-destructive/50' : ''}`}>
         {config?.hasPivas ? (
           <div
             className="flex items-center h-10 pl-4 pr-4 cursor-pointer hover:bg-secondary/30 transition-colors"
@@ -599,8 +631,45 @@ function InlineEditableRow({
           />
         )}
       </td>
-      {/* Status - opens modal instead of inline dropdown */}
+      {/* Instruksi Khusus - Urine Catheter only */}
       <td className={cellBase}>
+        {needsInstruksiKhusus ? (
+          <InlineCellDropdown
+            options={INSTRUKSI_KHUSUS_URINE}
+            value={instruksiKhusus[0] || ""}
+            onChange={(v) => setInstruksiKhusus(v ? [v] : [])}
+            placeholder="Pilih Instruksi"
+            allowFreeText
+          />
+        ) : (
+          <div className="h-10 flex items-center pl-4">
+            <span className="text-muted-foreground" style={tdStyle}>&nbsp;</span>
+          </div>
+        )}
+      </td>
+      {/* Fiksasi Balon (Isi Balon) - ETT & Urine Catheter */}
+      <td className={cellBase}>
+        {needsIsiBalon ? (
+          <div className="flex items-center h-10 pl-4 pr-4 gap-1">
+            <input
+              type="number"
+              className="w-16 bg-transparent outline-none text-foreground placeholder:text-muted-foreground"
+              style={{ fontSize: "var(--text-sm)", fontFamily: "'Inter', sans-serif" }}
+              placeholder="0"
+              value={isiBalon}
+              onChange={(e) => setIsiBalon(e.target.value)}
+              min="0"
+            />
+            <span className="text-xs text-muted-foreground font-medium shrink-0">ml</span>
+          </div>
+        ) : (
+          <div className="h-10 flex items-center pl-4">
+            <span className="text-muted-foreground" style={tdStyle}>&nbsp;</span>
+          </div>
+        )}
+      </td>
+      {/* Status - opens modal instead of inline dropdown */}
+      <td className={`${cellBase} ${validationErrors.status ? 'ring-2 ring-inset ring-destructive/50' : ''}`}>
         <div
           className="flex items-center h-10 pl-4 pr-4 cursor-pointer hover:bg-secondary/30 transition-colors gap-2"
           onClick={() => setShowStatusModal(true)}
@@ -679,8 +748,7 @@ function InlineEditableRow({
           )}
           <button
             onClick={handleSave}
-            disabled={!deviceType || !waktuPemasangan || (needsWaktuPelepasan && !waktuPelepasan)}
-            className="flex items-center justify-center size-[24px] hover:opacity-70 transition-opacity disabled:opacity-30 rounded-full border border-[#047857] bg-white"
+            className="flex items-center justify-center size-[24px] hover:opacity-70 transition-opacity rounded-full border border-[#047857] bg-white"
             title="Simpan"
           >
             <Check className="w-4 h-4 text-[#047857]" />
@@ -711,6 +779,26 @@ function InlineEditableRow({
         )}
       </td>
     </tr>
+    {/* Validation Error Banner */}
+    {Object.keys(validationErrors).length > 0 && (
+      <tr>
+        <td colSpan={20} className="bg-[#fff1f2] px-4 py-2 border border-[#fecaca]">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-[#be123c] shrink-0" />
+            <span className="text-xs font-bold text-[#be123c]" style={{ fontFamily: "'Inter', sans-serif" }}>
+              Kolom wajib belum diisi:
+              {validationErrors.deviceType && ' Alat Invasif,'}
+              {validationErrors.waktuPemasangan && ' Waktu Pemasangan,'}
+              {validationErrors.divaScore && ' Skor DIVA,'}
+              {validationErrors.pivasScore && ' Skor PIVAS,'}
+              {validationErrors.status && ' Status,'}
+              {validationErrors.waktuPelepasan && ' Waktu Pelepasan,'}
+            </span>
+          </div>
+        </td>
+      </tr>
+    )}
+  </>
   );
 }
 
@@ -733,8 +821,10 @@ export function InvasiveTable({
   highlightedDeviceId,
   formDraftRef,
 }: InvasiveTableProps) {
+  const { handleOpenMedicationHistory } = useAppContext();
   const [scrolledLeft, setScrolledLeft] = useState(false);
   const [scrolledRight, setScrolledRight] = useState(false);
+  const [sortWaktu, setSortWaktu] = useState<"asc" | "desc" | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Derive editingRowId from the prop
@@ -778,7 +868,17 @@ export function InvasiveTable({
 
   const totalPages = Math.max(1, Math.ceil(devices.length / ITEMS_PER_PAGE));
   const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
-  const paginatedDevices = devices.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+  
+  // Apply sorting
+  const sortedDevices = (() => {
+    if (!sortWaktu) return devices;
+    return [...devices].sort((a, b) => {
+      const dateA = a.waktuPemasangan ? new Date(a.waktuPemasangan).getTime() : 0;
+      const dateB = b.waktuPemasangan ? new Date(b.waktuPemasangan).getTime() : 0;
+      return sortWaktu === "asc" ? dateA - dateB : dateB - dateA;
+    });
+  })();
+  const paginatedDevices = sortedDevices.slice(startIdx, startIdx + ITEMS_PER_PAGE);
   const activeFilters = getActiveFilterCount(filter);
 
   const terpasang = devices.filter((d) => !d.waktuPelepasan && d.status === "berhasil").length;
@@ -855,7 +955,7 @@ export function InvasiveTable({
       {/* Table */}
       {(paginatedDevices.length > 0 || isAddingRow || editingRowId !== null) ? (
         <div ref={scrollContainerRef} className="bg-card rounded-lg overflow-x-auto border border-border">
-          <table className="w-full min-w-[1600px] border-collapse">
+          <table className="w-full min-w-[1900px] border-collapse">
             <thead>
               <tr className="bg-[#f8fafc]">
                 <th className={stickyFirstTh} style={scrolledLeft ? { ...thStyle, ...leftShadow } : thStyle}>Alat Invasif<span className="text-destructive">*</span></th>
@@ -867,8 +967,21 @@ export function InvasiveTable({
                 <th className="text-left px-4 py-2 border border-border text-foreground whitespace-nowrap" style={thStyle}>
                   Skor DIVA<span className="text-destructive">*</span>
                 </th>
-                <th className="text-left px-4 py-2 border border-border text-foreground whitespace-nowrap" style={thStyle}>
-                  Waktu Pemasangan<span className="text-destructive">*</span>
+                <th
+                  className="text-left px-4 py-2 border border-border text-foreground whitespace-nowrap cursor-pointer select-none hover:bg-[#edf2f7] transition-colors"
+                  style={thStyle}
+                  onClick={() => setSortWaktu(prev => prev === "asc" ? "desc" : prev === "desc" ? null : "asc")}
+                >
+                  <div className="flex items-center gap-1">
+                    Waktu Pemasangan<span className="text-destructive">*</span>
+                    {sortWaktu === "asc" ? (
+                      <ArrowUp className="w-3.5 h-3.5 text-[#00277f]" />
+                    ) : sortWaktu === "desc" ? (
+                      <ArrowDown className="w-3.5 h-3.5 text-[#00277f]" />
+                    ) : (
+                      <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground/50" />
+                    )}
+                  </div>
                 </th>
                 <th className="text-left px-4 py-2 border border-border text-foreground" style={thStyle}>Rekomendasi Pelepasan Alat</th>
                 <th className="text-left px-4 py-2 border border-border text-foreground whitespace-nowrap" style={thStyle}>Alasan Pelepasan</th>
@@ -876,6 +989,8 @@ export function InvasiveTable({
                 <th className="text-left px-4 py-2 border border-border text-foreground whitespace-nowrap" style={thStyle}>
                   Skor PIVAS<span className="text-destructive">*</span>
                 </th>
+                <th className="text-left px-4 py-2 border border-border text-foreground whitespace-nowrap" style={thStyle}>Instruksi Khusus</th>
+                <th className="text-left px-4 py-2 border border-border text-foreground whitespace-nowrap w-[120px]" style={thStyle}>Fiksasi Balon</th>
                 <th className="text-left px-4 py-2 border border-border text-foreground whitespace-nowrap w-[152px]" style={thStyle}>
                   Status<span className="text-destructive">*</span>
                 </th>
@@ -944,36 +1059,25 @@ export function InvasiveTable({
                 return (
                   <tr key={device.id} data-device-id={device.id} className={`hover:bg-secondary/30 transition-colors ${highlightedDeviceId === device.id ? "reminder-flash" : ""}`}>
                     <td className={stickyFirstTd} style={scrolledLeft ? leftShadow : noShadow}>
-                      <div className="flex items-center gap-1.5">
-                        <span>{device.displayName}</span>
-                        {device.isDraft && (
-                          <span
-                            className="px-1.5 py-0.5 rounded border border-[#c2410c] text-[#c2410c] shrink-0 flex items-center gap-1 bg-[#fff7ed]"
-                            style={{ fontSize: "10px", fontWeight: "var(--font-weight-bold)", fontFamily: "'Inter', sans-serif" }}
-                          >
-                            Draft
-                          </span>
-                        )}
-                        {pendingTasks && (
+                      <div className="flex flex-col gap-1 items-start">
+                        <div className="flex items-center gap-1.5">
+                          <span>{device.displayName}</span>
+                          {device.isDraft && (
+                            <span
+                              className="px-1.5 py-0.5 rounded border border-[#c2410c] text-[#c2410c] shrink-0 flex items-center gap-1 bg-[#fff7ed]"
+                              style={{ fontSize: "10px", fontWeight: "var(--font-weight-bold)", fontFamily: "'Inter', sans-serif" }}
+                            >
+                              Draft
+                            </span>
+                          )}
+                        </div>
+                        {device.deviceType === "IV Perifer" && device.alasanPelepasan && parseInt(device.pivasScore?.charAt(0) || "0", 10) > 1 && (
                           <button
-                            onClick={() => onOpenIntervensi && onOpenIntervensi(device)}
-                            className="px-1.5 py-0.5 rounded-full border border-[#b45309] text-[#b45309] hover:bg-[#fffbeb] transition-colors shrink-0 flex items-center gap-1"
+                            onClick={handleOpenMedicationHistory}
+                            className="flex items-center gap-1 text-[#00277f] hover:underline whitespace-nowrap"
                             style={{ fontSize: "10px", fontWeight: "var(--font-weight-bold)", fontFamily: "'Inter', sans-serif" }}
-                            title="Lakukan Intervensi"
                           >
-                            <FileText className="w-[14px] h-[14px]" />
-                            {completedCount}/{totalTaskCount}
-                          </button>
-                        )}
-                        {tasksDone && (
-                          <button
-                            onClick={() => onOpenIntervensi && onOpenIntervensi(device)}
-                            className="px-1.5 py-0.5 rounded-full border border-[#047857] text-[#047857] hover:bg-[#ecfdf5] transition-colors shrink-0 flex items-center gap-1 bg-[#ecfdf5]"
-                            style={{ fontSize: "10px", fontWeight: "var(--font-weight-bold)", fontFamily: "'Inter', sans-serif" }}
-                            title="Lihat Intervensi"
-                          >
-                            <FileCheck2 className="w-[14px] h-[14px]" />
-                            {completedCount}/{totalTaskCount}
+                            <Link className="w-3 h-3" /> Medication History
                           </button>
                         )}
                       </div>
@@ -997,12 +1101,27 @@ export function InvasiveTable({
                     <td className="px-4 py-2 border border-border whitespace-nowrap">
                       <RekomendasiBadge text={rek} />
                     </td>
-                    <td className="px-4 py-2 border border-border text-foreground whitespace-nowrap" style={tdStyle}>{device.alasanPelepasan || ""}</td>
+                    <td className="px-4 py-2 border border-border text-foreground whitespace-nowrap" style={tdStyle}>
+                      <div className="flex items-center gap-2">
+                        <span>{device.alasanPelepasan || ""}</span>
+                        {device.alasanPelepasan === "Ekstravasasi" && device.ekstravasasiScore && (
+                          <span className="text-[10px] font-bold text-[#c2410c] bg-[#fff7ed] px-1.5 py-0.5 rounded border border-[#fed7aa]">
+                            Stage {device.ekstravasasiScore}
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-4 py-2 border border-border text-foreground whitespace-nowrap" style={tdStyle}>
                       {device.waktuPelepasan ? formatDateDisplay(device.waktuPelepasan) : ""}
                     </td>
                     <td className="px-4 py-2 border border-border text-foreground" style={tdStyle}>
                       <PivasCell score={device.pivasScore} kategoriPhlebitis={device.kategoriPhlebitis} />
+                    </td>
+                    <td className="px-4 py-2 border border-border text-foreground whitespace-nowrap" style={tdStyle}>
+                      {device.instruksiKhusus && device.instruksiKhusus.length > 0 ? device.instruksiKhusus.join(", ") : ""}
+                    </td>
+                    <td className="px-4 py-2 border border-border text-foreground whitespace-nowrap" style={tdStyle}>
+                      {device.isiBalon ? `${device.isiBalon} ml` : ""}
                     </td>
                     <td className="px-4 py-2 border border-border whitespace-nowrap"><StatusBadge status={device.status} /></td>
                     <td className="px-4 py-2 border border-border text-foreground whitespace-nowrap" style={tdStyle}>{device.komen || ""}</td>
@@ -1029,24 +1148,6 @@ export function InvasiveTable({
                             >
                               <Pencil className="w-[18px] h-[18px] text-[#0369a1]" />
                             </button>
-                            {onOpenIntervensi && pendingTasks && (
-                              <button
-                                onClick={() => onOpenIntervensi(device)}
-                                className="flex items-center justify-center p-1 hover:opacity-70 transition-opacity"
-                                title="Intervensi - belum selesai"
-                              >
-                                <FileText className="w-[18px] h-[18px] text-[#b45309]" />
-                              </button>
-                            )}
-                            {onOpenIntervensi && tasksDone && (
-                              <button
-                                onClick={() => onOpenIntervensi(device)}
-                                className="flex items-center justify-center p-1 hover:opacity-70 transition-opacity"
-                                title="Intervensi - selesai"
-                              >
-                                <FileCheck2 className="w-[18px] h-[18px] text-[#047857]" />
-                              </button>
-                            )}
                           </>
                         )}
                       </div>

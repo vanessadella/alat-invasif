@@ -243,6 +243,22 @@ export interface PivasLogEntry {
   catatan?: string; // Optional note attached to this evaluation
 }
 
+// Instruksi Khusus options for Urine Catheter (Surgery Care)
+export const INSTRUKSI_KHUSUS_URINE = [
+  "Fiksasi ditarik/traksi di paha",
+  "Bilas NaCL",
+  "Klem .... Jam",
+  "Blader palpation 2jam setelah pemasangan",
+];
+
+// Instruksi Khusus options for ETT
+export const INSTRUKSI_KHUSUS_ETT = [
+  "Cuff Pressure Monitoring",
+  "Fiksasi Ulang Berkala",
+  "Suction Berkala",
+  "Oral Hygiene Berkala",
+];
+
 export interface InvasiveDevice {
   id: string;
   deviceType: string;
@@ -256,7 +272,8 @@ export interface InvasiveDevice {
   waktuPemasangan: string;
   waktuPelepasan: string;
   alasanPelepasan: string;
-  ekstravasasiScore?: string; // Ekstravasasi grade for Chemoport/PICC
+  ekstravasasiScore?: string; // Ekstravasasi stage for Chemoport/PICC
+  ekstravasasiChecks?: string[]; // Ekstravasasi symptom checkboxes
   pivasScore: string;
   pivasLog: PivasLogEntry[];
   kategoriPhlebitis: string;
@@ -267,6 +284,8 @@ export interface InvasiveDevice {
   komen: string;
   intervensiTasks?: IntervensiTask[]; // Intervention checklist
   isDraft?: boolean; // True if the entry is a partially-filled draft
+  instruksiKhusus?: string[]; // Optional special instructions for ETT & Urine Catheter
+  isiBalon?: string; // Optional balloon fill in ml for ETT & Urine Catheter
 }
 
 // Draft state for form persistence across layout changes (mobile ↔ desktop)
@@ -283,6 +302,7 @@ export interface FormDraft {
   waktuPelepasan: string;
   alasanPelepasan: string;
   ekstravasasiScore: string;
+  ekstravasasiChecks: string[];
   pivasScore: string;
   kategoriPhlebitis: string;
   status: string;
@@ -290,6 +310,8 @@ export interface FormDraft {
   pemasang: string;
   pelepas: string;
   komen: string;
+  instruksiKhusus: string[];
+  isiBalon: string;
 }
 
 // --- Scalable Intervention Score System ---
@@ -362,32 +384,33 @@ const EKSTRAVASASI_TEMPLATES: Record<number, Omit<IntervensiTask, "checked">[]> 
     { id: "eks0-2", text: "Dokumentasikan kondisi" },
   ],
   1: [
-    { id: "eks1-1", text: "Observasi area insersi" },
-    { id: "eks1-2", text: "Kompres dingin pada area" },
-    { id: "eks1-3", text: "Dokumentasikan kondisi" },
+    { id: "eks1-1", text: "Observasi ketat lokasi infus" },
+    { id: "eks1-2", text: "Lepaskan kanula bila tidak lagi diperlukan" },
+    { id: "eks1-3", text: "Observasi PIVAS score sampai 48-96 jam" },
+    { id: "eks1-4", text: "Dokumentasikan" },
   ],
   2: [
-    { id: "eks2-1", text: "Hentikan infus segera" },
-    { id: "eks2-2", text: "Kompres dingin/panas sesuai jenis obat" },
-    { id: "eks2-3", text: "Elevasi ekstremitas" },
-    { id: "eks2-4", text: "Dokumentasikan dan buat Incident Report" },
+    { id: "eks2-1", text: "Lepaskan kanula" },
+    { id: "eks2-2", text: "Tinggikan ekstremitas" },
+    { id: "eks2-3", text: "Kompres" },
+    { id: "eks2-4", text: "Pertimbangkan antidot" },
   ],
   3: [
-    { id: "eks3-1", text: "Hentikan infus segera" },
-    { id: "eks3-2", text: "Aspirasi sisa obat dari kateter" },
-    { id: "eks3-3", text: "Berikan antidot sesuai protokol" },
-    { id: "eks3-4", text: "Konsultasi dengan dokter" },
-    { id: "eks3-5", text: "Foto dokumentasi luka" },
-    { id: "eks3-6", text: "Dokumentasikan dan buat Incident Report" },
+    { id: "eks3-1", text: "Pertahankan kanula" },
+    { id: "eks3-2", text: "Aspirasi (spuit 1 mL)" },
+    { id: "eks3-3", text: "Lepas bila tidak perlu antidot" },
+    { id: "eks3-4", text: "Elevasi" },
+    { id: "eks3-5", text: "Kompres" },
+    { id: "eks3-6", text: "Antidot" },
   ],
   4: [
-    { id: "eks4-1", text: "Hentikan infus segera" },
-    { id: "eks4-2", text: "Aspirasi sisa obat dari kateter" },
-    { id: "eks4-3", text: "Berikan antidot sesuai protokol" },
-    { id: "eks4-4", text: "Konsultasi dengan dokter spesialis" },
-    { id: "eks4-5", text: "Evaluasi kemungkinan debridement" },
-    { id: "eks4-6", text: "Foto dokumentasi luka" },
-    { id: "eks4-7", text: "Dokumentasikan dan buat Incident Report" },
+    { id: "eks4-1", text: "Pertahankan kanula" },
+    { id: "eks4-2", text: "Aspirasi maksimal" },
+    { id: "eks4-3", text: "Lepas bila tidak perlu antidot" },
+    { id: "eks4-4", text: "Elevasi" },
+    { id: "eks4-5", text: "Kompres" },
+    { id: "eks4-6", text: "Antidot" },
+    { id: "eks4-7", text: "Konsultasi bedah" },
   ],
 };
 

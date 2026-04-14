@@ -1,49 +1,132 @@
-import { useState } from "react";
-import { X, AlertCircle, CheckCircle2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { X } from "lucide-react";
 
 interface EkstravasasiModalProps {
   currentScore: string;
-  onSave: (score: string) => void;
+  currentChecks?: string[];
+  onSave: (score: string, checks: string[]) => void;
   onClose: () => void;
 }
 
-const GRADES = [
-  { value: "0", label: "Grade 0", desc: "Tidak ada gejala ekstravasasi" },
-  { value: "1", label: "Grade 1", desc: "Nyeri ringan, kemerahan minimal, tanpa bengkak" },
-  { value: "2", label: "Grade 2", desc: "Nyeri sedang, kemerahan, bengkak ringan < 2.5 cm" },
-  { value: "3", label: "Grade 3", desc: "Nyeri berat, kemerahan luas, bengkak 2.5-5 cm, indurasi" },
-  { value: "4", label: "Grade 4", desc: "Nekrosis jaringan, ulserasi, bengkak > 5 cm" },
+// Symptom categories matching the Figma design
+const CATEGORIES: { title: string; items: string[] }[] = [
+  {
+    title: "Nyeri",
+    items: [
+      "Lokasi infus terasa nyeri",
+      "Nyeri",
+    ],
+  },
+  {
+    title: "Eritema",
+    items: [
+      "Tidak ada eritema",
+      "Eritema ringan",
+      "Eritema meluas",
+      "Eritema luas",
+    ],
+  },
+  {
+    title: "Bengkak",
+    items: [
+      "Pembengkakan lokal (±1-10% area ekstremitas)",
+      "Pembengkakan ringan (±25%)",
+      "Pembengkakan 25-50%",
+      "Pembengkakan >50%",
+    ],
+  },
+  {
+    title: "Lainnya",
+    items: [
+      "Kulit sekitar mulai hangat",
+      "Kulit Dingin",
+      "CRT 1-2 detik",
+      "CRT >4 detik",
+      "Blanching (vasopressor)",
+      "Nadi distal baik",
+      "Nadi baik",
+      "Nadi ↓ / tidak ada",
+      "Nekrosis / blister",
+    ],
+  },
 ];
 
-function getGradeStyle(grade: string) {
-  switch (grade) {
-    case "0": return "bg-[#ecfdf5] text-[#047857] border-[#a7f3d0]";
-    case "1": return "bg-[#fefce8] text-[#a16207] border-[#fde047]";
-    case "2": return "bg-[#fff7ed] text-[#c2410c] border-[#fed7aa]";
-    case "3": return "bg-[#fef2f2] text-[#b91c1c] border-[#fecaca]";
-    case "4": return "bg-[#7f1d1d] text-white border-[#450a0a]";
-    default: return "bg-secondary text-muted-foreground border-border";
-  }
-}
+const STAGES = ["1", "2", "3", "4", "5"];
 
-function RadioIcon({ selected }: { selected: boolean }) {
+function CheckboxIcon({ checked }: { checked: boolean }) {
   return (
-    <div className={`shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${selected ? "border-[#00277f]" : "border-muted-foreground/30"}`}>
-      {selected && <div className="w-2.5 h-2.5 rounded-full bg-[#00277f]" />}
+    <div
+      className={`shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+        checked
+          ? "bg-[#00277f] border-[#00277f]"
+          : "bg-white border-muted-foreground/30"
+      }`}
+    >
+      {checked && (
+        <svg width="12" height="9" viewBox="0 0 12 9" fill="none">
+          <path
+            d="M1 4L4.5 7.5L11 1"
+            stroke="white"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      )}
     </div>
   );
 }
 
-export function EkstravasasiModal({ currentScore, onSave, onClose }: EkstravasasiModalProps) {
-  const [selected, setSelected] = useState<string>(currentScore || "");
+export function EkstravasasiModal({ currentScore, currentChecks, onSave, onClose }: EkstravasasiModalProps) {
+  const [checks, setChecks] = useState<string[]>(currentChecks || []);
+  const [stage, setStage] = useState<string>(currentScore || "");
 
-  const selectedGrade = GRADES.find((g) => g.value === selected);
-  const scoreColorClass = selected ? getGradeStyle(selected) : "bg-secondary text-muted-foreground border-border";
+  useEffect(() => {
+    let maxStage = 0;
+    for (const check of checks) {
+      if ([
+        "Pembengkakan >50%", 
+        "Eritema luas", 
+        "Nadi ↓ / tidak ada", 
+        "CRT >4 detik", 
+        "Nekrosis / blister"
+      ].includes(check)) {
+        maxStage = Math.max(maxStage, 4);
+      } else if ([
+        "Nyeri", 
+        "Pembengkakan 25-50%", 
+        "Eritema meluas", 
+        "Blanching (vasopressor)", 
+        "Kulit Dingin", 
+        "Nadi baik"
+      ].includes(check)) {
+        maxStage = Math.max(maxStage, 3);
+      } else if ([
+        "Eritema ringan", 
+        "Pembengkakan ringan (±25%)", 
+        "Nadi distal baik", 
+        "CRT 1-2 detik"
+      ].includes(check)) {
+        maxStage = Math.max(maxStage, 2);
+      } else if ([
+        "Lokasi infus terasa nyeri", 
+        "Tidak ada eritema", 
+        "Pembengkakan lokal (±1-10% area ekstremitas)"
+      ].includes(check)) {
+        maxStage = Math.max(maxStage, 1);
+      }
+    }
+    setStage(maxStage > 0 ? maxStage.toString() : "");
+  }, [checks]);
+
+  const toggleCheck = (item: string) => {
+    setChecks((prev) =>
+      prev.includes(item) ? prev.filter((c) => c !== item) : [...prev, item]
+    );
+  };
 
   const handleSave = () => {
-    if (selected) {
-      onSave(selected);
-    }
+    onSave(stage, checks);
   };
 
   return (
@@ -53,83 +136,102 @@ export function EkstravasasiModal({ currentScore, onSave, onClose }: Ekstravasas
       onClick={onClose}
     >
       <div
-        className="bg-[#f8fafc] flex flex-col w-full max-w-[460px] max-h-[90vh] overflow-hidden rounded-xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border border-border"
+        className="bg-[#f8fafc] flex flex-col w-full max-w-[820px] max-h-[90vh] overflow-hidden rounded-xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border border-border"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border bg-white">
-          <h2 className="text-foreground text-lg font-bold" style={{ fontFamily: "'Inter', sans-serif" }}>
+          <h2
+            className="text-foreground text-lg font-bold"
+            style={{ fontFamily: "'Inter', sans-serif" }}
+          >
             Skor Ekstravasasi
           </h2>
-          <button onClick={onClose} className="p-1.5 hover:bg-secondary rounded-lg transition-colors" title="Tutup">
+          <button
+            onClick={onClose}
+            className="p-1.5 hover:bg-secondary rounded-lg transition-colors"
+            title="Tutup"
+          >
             <X className="w-5 h-5 text-muted-foreground" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4">
-          <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider mb-3">Pilih Grade Ekstravasasi</p>
-          <div className="flex flex-col gap-2">
-            {GRADES.map((grade) => {
-              const isSelected = selected === grade.value;
-              return (
-                <label
-                  key={grade.value}
-                  className={`flex items-start gap-3 cursor-pointer p-3 rounded-lg transition-colors border ${
-                    isSelected ? "bg-[#f0f4ff] border-[#00277f]/30" : "bg-card border-transparent hover:bg-secondary/60 hover:border-border/50"
-                  }`}
-                  onClick={(e) => { e.preventDefault(); setSelected(grade.value); }}
+        <div className="flex-1 overflow-y-auto p-5">
+          {/* Checkbox Grid - 4 columns */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+            {CATEGORIES.map((cat) => (
+              <div key={cat.title} className="flex flex-col gap-2.5">
+                <h3
+                  className="text-sm font-bold text-foreground"
+                  style={{ fontFamily: "'Inter', sans-serif" }}
                 >
-                  <RadioIcon selected={isSelected} />
-                  <div className="flex flex-col gap-0.5 flex-1">
-                    <span className={`text-sm font-bold ${isSelected ? "text-[#001b63]" : "text-foreground"}`}>
-                      {grade.label}
-                    </span>
-                    <span className={`text-xs ${isSelected ? "text-[#001b63]/80" : "text-muted-foreground"}`}>
-                      {grade.desc}
-                    </span>
-                  </div>
-                </label>
-              );
-            })}
+                  {cat.title}
+                </h3>
+                <div className="flex flex-col gap-2">
+                  {cat.items.map((item) => {
+                    const isChecked = checks.includes(item);
+                    return (
+                      <label
+                        key={item}
+                        className="flex items-start gap-2.5 cursor-pointer select-none group"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          toggleCheck(item);
+                        }}
+                      >
+                        <CheckboxIcon checked={isChecked} />
+                        <span
+                          className={`text-sm leading-tight ${
+                            isChecked ? "text-foreground font-medium" : "text-muted-foreground"
+                          }`}
+                          style={{ fontFamily: "'Inter', sans-serif" }}
+                        >
+                          {item}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Stage Ekstravasasi Input */}
+          <div className="mt-6 flex flex-col gap-1.5">
+            <label
+              className="text-sm font-bold text-foreground"
+              style={{ fontFamily: "'Inter', sans-serif" }}
+            >
+              Stage Ekstravasasi
+            </label>
+            <input
+              type="text"
+              className="w-full px-4 py-3 bg-[#f1f5f9] border border-border rounded-lg text-sm text-foreground font-medium outline-none cursor-not-allowed"
+              style={{ fontFamily: "'Inter', sans-serif" }}
+              placeholder="Stage akan dihitung otomatis..."
+              value={stage ? `Stage ${stage}` : ""}
+              readOnly
+            />
           </div>
         </div>
 
-        {/* Score Result + Actions */}
-        <div className="px-5 pb-5 pt-2 bg-white flex flex-col gap-4 border-t border-border shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-bold text-foreground">Hasil Evaluasi</label>
-            <div className={`flex items-center gap-3 w-full px-4 py-3 rounded-lg border transition-all ${scoreColorClass}`}>
-              {selected ? (
-                <>
-                  {parseInt(selected) >= 3 ? (
-                    <AlertCircle className="w-5 h-5 shrink-0" />
-                  ) : (
-                    <CheckCircle2 className="w-5 h-5 shrink-0" />
-                  )}
-                  <span className="text-sm font-bold">{selectedGrade?.label} — {selectedGrade?.desc}</span>
-                </>
-              ) : (
-                <span className="text-sm text-muted-foreground">Pilih grade untuk melihat hasil</span>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <button
-              onClick={onClose}
-              className="px-6 py-2.5 border border-border rounded-lg text-sm font-bold text-foreground hover:bg-secondary transition-colors"
-            >
-              BATAL
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={!selected}
-              className="px-6 py-2.5 bg-[#00277f] text-white rounded-lg text-sm font-bold disabled:opacity-50 hover:bg-[#001b63] transition-colors shadow-sm"
-            >
-              SIMPAN SKOR
-            </button>
-          </div>
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-border bg-white shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)]">
+          <button
+            onClick={onClose}
+            className="px-6 py-2.5 border border-border rounded-lg text-sm font-bold text-foreground hover:bg-secondary transition-colors"
+            style={{ fontFamily: "'Inter', sans-serif" }}
+          >
+            BATAL
+          </button>
+          <button
+            onClick={handleSave}
+            className="px-6 py-2.5 bg-[#00277f] text-white rounded-lg text-sm font-bold hover:bg-[#001b63] transition-colors shadow-sm"
+            style={{ fontFamily: "'Inter', sans-serif" }}
+          >
+            SIMPAN
+          </button>
         </div>
       </div>
     </div>

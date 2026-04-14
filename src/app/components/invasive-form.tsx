@@ -19,6 +19,8 @@ import {
   FormDraft,
   generateIntervensiTasks,
   computeAutoChecks,
+  INSTRUKSI_KHUSUS_URINE,
+  INSTRUKSI_KHUSUS_ETT,
 } from "./invasive-data";
 
 interface InvasiveFormProps {
@@ -117,6 +119,9 @@ export function InvasiveForm({ onSave, onSaveDraft, onCancel, existingDevices, e
   const [komen, setKomen] = useState(draft?.komen ?? editDevice?.komen ?? "");
   const [kategoriPhlebitis, setKategoriPhlebitis] = useState(draft?.kategoriPhlebitis ?? editDevice?.kategoriPhlebitis ?? "");
   const [intervensiTasks, setIntervensiTasks] = useState<IntervensiTask[]>(editDevice?.intervensiTasks || []);
+  const [instruksiKhusus, setInstruksiKhusus] = useState<string[]>(draft?.instruksiKhusus ?? editDevice?.instruksiKhusus ?? []);
+  const [isiBalon, setIsiBalon] = useState(draft?.isiBalon ?? editDevice?.isiBalon ?? "");
+  const [ekstravasasiChecks, setEkstravasasiChecks] = useState<string[]>(draft?.ekstravasasiChecks ?? editDevice?.ekstravasasiChecks ?? []);
 
   // Modal states
   const [showPivasModal, setShowPivasModal] = useState(false);
@@ -131,6 +136,7 @@ export function InvasiveForm({ onSave, onSaveDraft, onCancel, existingDevices, e
   const config: InvasiveDeviceConfig | undefined = INVASIVE_DEVICES.find((d) => d.name === deviceType);
   const isIvPerifer = deviceType === "IV Perifer";
   const needsEkstravasasi = (deviceType === "Chemoport" || deviceType === "PICC") && alasanPelepasan === "Ekstravasasi";
+  const needsInstruksiKhusus = deviceType === "ETT" || deviceType === "Urine Catheter";
 
   // Whether the form has any data filled beyond device type
   const hasFilledData = !!(jenis || location || size || sizeHuber || divaScore || pivasScore || alasanPelepasan || status || pemasang || pelepas || komen);
@@ -143,12 +149,14 @@ export function InvasiveForm({ onSave, onSaveDraft, onCancel, existingDevices, e
         divaScore, divaType,
         waktuPemasangan, waktuPelepasan, alasanPelepasan,
         ekstravasasiScore,
+        ekstravasasiChecks,
         pivasScore, kategoriPhlebitis,
         status: status as string, statusKriteria,
         pemasang, pelepas, komen,
+        instruksiKhusus, isiBalon,
       };
     }
-  }, [deviceType, jenis, location, size, sizeHuber, divaScore, divaType, waktuPemasangan, waktuPelepasan, alasanPelepasan, ekstravasasiScore, pivasScore, kategoriPhlebitis, status, statusKriteria, pemasang, pelepas, komen, formDraftRef]);
+  }, [deviceType, jenis, location, size, sizeHuber, divaScore, divaType, waktuPemasangan, waktuPelepasan, alasanPelepasan, ekstravasasiScore, ekstravasasiChecks, pivasScore, kategoriPhlebitis, status, statusKriteria, pemasang, pelepas, komen, instruksiKhusus, isiBalon, formDraftRef]);
 
   // Reset dependent fields when device type changes
   useEffect(() => {
@@ -232,9 +240,12 @@ export function InvasiveForm({ onSave, onSaveDraft, onCancel, existingDevices, e
       divaType: isIvPerifer ? divaType : undefined,
       waktuPemasangan, waktuPelepasan, alasanPelepasan,
       ekstravasasiScore: needsEkstravasasi ? ekstravasasiScore : undefined,
+      ekstravasasiChecks: needsEkstravasasi ? ekstravasasiChecks : undefined,
       pivasScore, pivasLog,
       status, statusKriteria,
       pemasang, pelepas, komen, kategoriPhlebitis, intervensiTasks,
+      instruksiKhusus: needsInstruksiKhusus ? instruksiKhusus : undefined,
+      isiBalon: needsInstruksiKhusus ? isiBalon : undefined,
     };
     onSave(device);
   };
@@ -251,11 +262,14 @@ export function InvasiveForm({ onSave, onSaveDraft, onCancel, existingDevices, e
       divaType: isIvPerifer ? divaType : undefined,
       waktuPemasangan, waktuPelepasan, alasanPelepasan,
       ekstravasasiScore: needsEkstravasasi ? ekstravasasiScore : undefined,
+      ekstravasasiChecks: needsEkstravasasi ? ekstravasasiChecks : undefined,
       pivasScore, pivasLog: editDevice?.pivasLog || [],
       status, statusKriteria,
       pemasang, pelepas, komen, kategoriPhlebitis,
       intervensiTasks: editDevice?.intervensiTasks,
       isDraft: true,
+      instruksiKhusus: needsInstruksiKhusus ? instruksiKhusus : undefined,
+      isiBalon: needsInstruksiKhusus ? isiBalon : undefined,
     };
     if (onSaveDraft) onSaveDraft(device);
   };
@@ -464,6 +478,58 @@ export function InvasiveForm({ onSave, onSaveDraft, onCancel, existingDevices, e
         <SearchableDropdown options={PEMASANG_OPTIONS} value={pelepas} onChange={setPelepas} placeholder="Pilih pelepas di sini..." allowFreeText freeTextLabel="Lainnya" />
       </div>
 
+      {/* Instruksi Khusus & Isi Balon - ETT & Urine Catheter only */}
+      {needsInstruksiKhusus && (
+        <div className="flex flex-col gap-3 bg-[#f8fafc] rounded-lg p-3">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-foreground" style={labelStyle}>
+              Instruksi Khusus
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {(deviceType === "Urine Catheter" ? INSTRUKSI_KHUSUS_URINE : INSTRUKSI_KHUSUS_ETT).map((option) => {
+                const selected = instruksiKhusus.includes(option);
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => {
+                      setInstruksiKhusus(prev =>
+                        selected ? prev.filter(v => v !== option) : [...prev, option]
+                      );
+                    }}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                      selected
+                        ? "bg-[#00277f] text-white border-[#00277f]"
+                        : "bg-white text-foreground border-border hover:border-[#00277f]/40"
+                    }`}
+                    style={{ fontFamily: "'Inter', sans-serif" }}
+                  >
+                    {option}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-foreground" style={labelStyle}>
+              Isi Balon
+            </label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                className="w-24 px-3 py-2 bg-input-background border border-border rounded-md text-foreground placeholder:text-muted-foreground outline-none focus:border-ring"
+                style={{ fontSize: "var(--text-sm)", fontFamily: "'Inter', sans-serif" }}
+                placeholder="0"
+                value={isiBalon}
+                onChange={(e) => setIsiBalon(e.target.value)}
+                min="0"
+              />
+              <span className="text-sm text-muted-foreground font-medium">ml</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Komen */}
       <div className="flex flex-col gap-1">
         <label className="text-foreground" style={labelStyle}>Komen</label>
@@ -530,7 +596,8 @@ export function InvasiveForm({ onSave, onSaveDraft, onCancel, existingDevices, e
       {showEkstravasasiModal && (
         <EkstravasasiModal
           currentScore={ekstravasasiScore}
-          onSave={(score) => { setEkstravasasiScore(score); setShowEkstravasasiModal(false); }}
+          currentChecks={ekstravasasiChecks}
+          onSave={(score, chks) => { setEkstravasasiScore(score); setEkstravasasiChecks(chks); setShowEkstravasasiModal(false); }}
           onClose={() => setShowEkstravasasiModal(false)}
         />
       )}

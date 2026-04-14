@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from "react";
-import { ChevronDown, ChevronUp, Clock, Pencil, AlertCircle, CheckCircle2, BookmarkPlus } from "lucide-react";
+import { ChevronDown, ChevronUp, Clock, Pencil, AlertCircle, CheckCircle2, BookmarkPlus, Link } from "lucide-react";
 import {
   InvasiveDevice,
   calculateDayCount,
   formatDateDisplay,
   hasPendingIntervensi,
 } from "./invasive-data";
+import { useAppContext } from "./root-layout";
 
 const fontBase: React.CSSProperties = { fontFamily: "'Inter', sans-serif" };
 const textXs: React.CSSProperties = { ...fontBase, fontSize: "var(--text-xs)" };
@@ -21,6 +22,7 @@ interface InvasiveCardProps {
 }
 
 export function InvasiveCard({ device, onEdit, onOpenIntervensi, highlightedDeviceId }: InvasiveCardProps) {
+  const { handleOpenMedicationHistory } = useAppContext();
   const [expanded, setExpanded] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const isHighlighted = highlightedDeviceId === device.id;
@@ -211,9 +213,16 @@ export function InvasiveCard({ device, onEdit, onOpenIntervensi, highlightedDevi
                 <p className="text-muted-foreground" style={textXs}>
                   Alasan Pelepasan
                 </p>
-                <p className="text-foreground" style={textSmBold}>
-                  {device.alasanPelepasan || "-"}
-                </p>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <p className="text-foreground" style={textSmBold}>
+                    {device.alasanPelepasan || "-"}
+                  </p>
+                  {device.alasanPelepasan === "Ekstravasasi" && device.ekstravasasiScore && (
+                    <span className="text-[10px] font-bold text-[#c2410c] bg-[#fff7ed] px-1.5 py-0.5 rounded border border-[#fed7aa]">
+                      Stage {device.ekstravasasiScore}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -273,6 +282,20 @@ export function InvasiveCard({ device, onEdit, onOpenIntervensi, highlightedDevi
             )}
           </div>
 
+          {/* Medication History Shortcut */}
+          {device.deviceType === "IV Perifer" && device.alasanPelepasan && parseInt(device.pivasScore?.charAt(0) || "0", 10) > 1 && (
+            <div className="px-3 pb-2 pt-1">
+              <button 
+                onClick={(e) => { e.stopPropagation(); handleOpenMedicationHistory(); }}
+                className="flex items-center gap-1.5 text-sm font-bold text-[#00277f] hover:underline"
+                style={{ fontFamily: "'Inter', sans-serif" }}
+              >
+                <Link className="w-4 h-4" />
+                Lihat Medication History
+              </button>
+            </div>
+          )}
+
           {/* Action buttons */}
           <div className="flex items-center gap-2 mt-3 p-1">
             <button
@@ -285,20 +308,6 @@ export function InvasiveCard({ device, onEdit, onOpenIntervensi, highlightedDevi
             >
               EDIT
             </button>
-            {onOpenIntervensi && hasIntervensi ? (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpenIntervensi(device);
-                }}
-                className={`flex-1 flex justify-center items-center py-2 rounded text-xs font-bold border ${allDone ? "border-[#047857] text-[#047857]" : "border-[#b45309] text-[#b45309]"}`}
-                style={{ fontFamily: "'Inter', sans-serif", backgroundColor: "white" }}
-              >
-                Intervensi ({completedCount}/{totalCount})
-              </button>
-            ) : (
-                <div className="flex-1" />
-            )}
           </div>
         </div>
       )}

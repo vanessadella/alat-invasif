@@ -11,9 +11,9 @@ import {
   getInterventionConfig,
   hasPendingIntervensi,
 } from "./invasive-data";
-import { FilterState, DEFAULT_FILTER, getActiveFilterCount } from "./filter-modal";
-import { FilterModal } from "./filter-modal";
-import { IntervensiModal } from "./intervensi-modal";
+import { FilterState, DEFAULT_FILTER, getActiveFilterCount, FilterModal } from "./filter-modal";
+import { CombinedIntervensiModal } from "./combined-intervensi-modal";
+import { MedicationHistoryModal } from "./medication-history-modal";
 import { Toaster } from "./ui/sonner";
 
 // Shared filter logic
@@ -72,7 +72,8 @@ export interface AppContextType {
   handleApplyFilter: (filter: FilterState) => void;
   setShowFilter: (v: boolean) => void;
   handleReminderClick: () => void;
-  handleOpenIntervensiModal: (device: InvasiveDevice) => void;
+  handleOpenIntervensiModal: (device?: InvasiveDevice) => void;
+  handleOpenMedicationHistory: () => void;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -92,11 +93,11 @@ export function RootLayout() {
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilter, setShowFilter] = useState(false);
   const [filter, setFilter] = useState<FilterState>(DEFAULT_FILTER);
-  const [showIntervensiModal, setShowIntervensiModal] = useState(false);
-  const [selectedDevice, setSelectedDevice] = useState<InvasiveDevice | null>(null);
+  const [showCombinedIntervensi, setShowCombinedIntervensi] = useState(false);
   const [highlightedDeviceId, setHighlightedDeviceId] = useState<string | null>(null);
   const [reminderCursor, setReminderCursor] = useState(0);
   const [activeTab, setActiveTab] = useState("SUMMARY");
+  const [showMedicationModal, setShowMedicationModal] = useState(false);
 
   const formDraftRef = useRef<FormDraft | null>(null);
 
@@ -233,28 +234,51 @@ export function RootLayout() {
     setShowFilter(false);
   };
 
-  const handleOpenIntervensiModal = (device: InvasiveDevice) => {
-    setSelectedDevice(device);
-    setShowIntervensiModal(true);
+  const handleOpenIntervensiModal = (_device?: InvasiveDevice) => {
+    setShowCombinedIntervensi(true);
   };
 
-  const handleCloseIntervensiModal = () => {
-    setShowIntervensiModal(false);
-    setSelectedDevice(null);
+  const handleCloseCombinedIntervensi = () => {
+    setShowCombinedIntervensi(false);
   };
 
-  const handleSaveIntervensi = (tasks: IntervensiTask[]) => {
-    if (selectedDevice) {
-      setDevices((prev) => {
-        const idx = prev.findIndex((d) => d.id === selectedDevice.id);
+  const handleOpenMedicationHistory = () => {
+    setShowMedicationModal(true);
+  };
+
+  const handleSaveCombinedIntervensi = (updates: { deviceId: string; tasks: IntervensiTask[] }[]) => {
+    setDevices((prev) => {
+      const updated = [...prev];
+      updates.forEach(({ deviceId, tasks }) => {
+        const idx = updated.findIndex((d) => d.id === deviceId);
         if (idx >= 0) {
-          const updated = [...prev];
-          updated[idx] = { ...updated[idx], intervensiTasks: tasks };
-          return updated;
+          const device = updated[idx];
+          const allChecked = tasks.length > 0 && tasks.every(t => t.checked);
+          
+          if (allChecked) {
+            // Move to history
+            const currentTime = new Date().toISOString();
+            const config = getInterventionConfig(device) || PIVAS_INTERVENTION_CONFIG;
+            const scoreValue = config.getScoreValue(device);
+            const historyEntry: PivasLogEntry = {
+              timestamp: currentTime,
+              score: scoreValue,
+              nurse: "Nurse Sarah", // Mock active user
+              intervensiTasks: tasks,
+            };
+            updated[idx] = {
+              ...device,
+              intervensiTasks: [], // Clear active
+              pivasLog: [...(device.pivasLog || []), historyEntry]
+            };
+          } else {
+            // Unfinished, strictly save checklist state
+            updated[idx] = { ...device, intervensiTasks: tasks };
+          }
         }
-        return prev;
       });
-    }
+      return updated;
+    });
   };
 
   const handleReminderClick = useCallback(() => {
@@ -303,7 +327,11 @@ export function RootLayout() {
     setShowFilter,
     handleReminderClick,
     handleOpenIntervensiModal,
+    handleOpenMedicationHistory,
   };
+
+  // Compute whether any devices have tasks at all (even if all done)
+  const hasAnyIntervensiTasks = devices.some(d => d.intervensiTasks && d.intervensiTasks.length > 0);
 
   return (
     <AppContext.Provider value={contextValue}>
@@ -311,12 +339,15 @@ export function RootLayout() {
       {showFilter && (
         <FilterModal filter={filter} onApply={handleApplyFilter} onClose={() => setShowFilter(false)} />
       )}
-      {showIntervensiModal && selectedDevice && (
-        <IntervensiModal
-          device={selectedDevice}
-          onSave={handleSaveIntervensi}
-          onClose={handleCloseIntervensiModal}
+      {showCombinedIntervensi && (
+        <CombinedIntervensiModal
+          devices={devices}
+          onSave={handleSaveCombinedIntervensi}
+          onClose={handleCloseCombinedIntervensi}
         />
+      )}
+      {showMedicationModal && (
+        <MedicationHistoryModal onClose={() => setShowMedicationModal(false)} />
       )}
       <div className="w-full h-[100dvh] bg-background font-sans overflow-hidden text-foreground">
         <Outlet />
